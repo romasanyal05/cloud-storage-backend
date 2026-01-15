@@ -18,6 +18,13 @@ app.use(express.urlencoded({ extended: true }));
 /* =========================
    BASIC TEST ROUTE
 ========================= */
+app.get("/api/test-env", (req, res) => {
+  return res.json({
+    BASE_URL: process.env.BASE_URL,
+    SUPABASE_URL: process.env.SUPABASE_URL ? "OK" : "MISSING",
+    PORT: process.env.PORT,
+  });
+});
 app.get("/", (req, res) => {
   res.send("Backend running ✅");
 });
