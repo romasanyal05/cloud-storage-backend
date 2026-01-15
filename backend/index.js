@@ -3,6 +3,8 @@ const cors = require("cors");
 require("dotenv").config();
 const crypto = require("crypto");
 
+const BASE_URL =
+  process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
 const upload = require("./middleware/upload");
 const supabaseAdmin = require("./supabase");
 const authMiddleware = require("./middleware/authMiddleware");
@@ -371,15 +373,18 @@ if (!req.user?.id) {
 
     if (shareError) {
       console.log("SHARE INSERT ERROR >>>", shareError);
+      console.log("SHARE INSERT ERROR MESSAGE >>>", shareError.message);
       return res.status(500).json({ error: shareError.message });
     }
     return res.json({
       message: "Share link created ✅",
       share: shareData,
-      shareUrl: `http://localhost:5000/api/share/access/${token}`,
+      shareUrl: `${BASE_URL}/api/share/access/${token}`,
     });
   } catch (err) {
     console.log("SHARE ROUTE ERROR >>>", err);
+    console.log("SHARE ROUTE ERROR MESSAGE >>>", err?.message);
+    console.log("SHARE ROUTE ERROR STACK >>>", err?.stack);
     return res.status(500).json({ error: err.message });
   }
 });
