@@ -5,6 +5,7 @@ const crypto = require("crypto");
 
 const BASE_URL =
   process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+ const shareUrl = `${baseUrl}/api/share/access/${shareId}`; 
 const upload = require("./middleware/upload");
 const supabaseAdmin = require("./supabase");
 const authMiddleware = require("./middleware/authMiddleware");
