@@ -4,7 +4,7 @@ require("dotenv").config();
 const crypto = require("crypto");
 
 const upload = require("./middleware/upload");
-const supabase = require("./supabase");
+const supabaseAdmin = require("./supabase");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
@@ -331,8 +331,17 @@ app.delete("/api/files/:id/permanent", authMiddleware, async (req, res) => {
 // CREATE share link
 app.post("/api/share/:fileId", authMiddleware, async (req, res) => {
   try {
-    const { fileId } = req.params;
+    const { fileId} = req.params;
+  
+console.log("SHARE AUTH HEADER >>>", req.headers.authorization);
+console.log("SHARE REQ.USER >>>", req.user);
+console.log("SHARE USER ID >>>:", req.user?.id);
 
+if (!req.user?.id) {
+      return res.status(401).json({ error: "User not found from token" });
+    }
+
+    // 1) File check (owner only)
     const { data: fileData, error: fileError } = await supabase
       .from("files")
       .select("*")
@@ -340,28 +349,40 @@ app.post("/api/share/:fileId", authMiddleware, async (req, res) => {
       .eq("user_id", req.user.id)
       .single();
 
-    if (fileError) return res.status(404).json({ error: "File not found" });
+    if (fileError || !fileData) {
+      return res.status(404).json({ error: "File not found" });
+    }
 
     const token = crypto.randomBytes(20).toString("hex");
 
-    const { data: shareData, error: shareError } = await supabase
+    // ✅ Insert share link WITH user_id
+    const { data: shareData, error: shareError } = await supabaseAdmin
       .from("share_links")
-      .insert([{ file_id: fileId, token, permission: "view" }])
+      .insert([
+        {
+          file_id: fileId,
+          token,
+          permission: "view",
+          user_id: req.user.id, // ✅ IMPORTANT
+        },
+      ])
       .select()
       .single();
 
-    if (shareError) return res.status(500).json({ error: shareError.message });
-
-    res.json({
+    if (shareError) {
+      console.log("SHARE INSERT ERROR >>>", shareError);
+      return res.status(500).json({ error: shareError.message });
+    }
+    return res.json({
       message: "Share link created ✅",
       share: shareData,
       shareUrl: `http://localhost:5000/api/share/access/${token}`,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.log("SHARE ROUTE ERROR >>>", err);
+    return res.status(500).json({ error: err.message });
   }
 });
-
 // ACCESS public share link
 app.get("/api/share/access/:token", async (req, res) => {
   try {
@@ -660,4 +681,6 @@ app.get("/api/protected", authMiddleware, (req, res) => {
 ========================= */
 const PORT = process.env.PORT || 5000;
 
-module.exports = app;
+app.listen(PORT, () => {
+  console.log(`✅ Backend running on http://localhost:${PORT}`);
+});

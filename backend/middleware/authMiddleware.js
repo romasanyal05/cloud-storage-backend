@@ -1,29 +1,24 @@
-const supabase = require("../supabase");
+const { supabaseAuth } = require("../supabase");
+
 const authMiddleware = async (req, res, next) => {
   try {
-    // 1️⃣ Token header से निकालो
     const authHeader = req.headers.authorization;
     console.log("AUTH HEADER >>>", authHeader);
-    console.log("REQ HEADERS >>>", req.headers);
-    console.log("TOKEN >>>", authHeader?.split(" ")[1]);
-    if (!authHeader) {
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ error: "No token provided" });
     }
 
     const token = authHeader.split(" ")[1];
 
-    // 2️⃣ Supabase से token verify
-    const { data, error } = await supabase.auth.getUser(token);
+    const { data, error } = await supabaseAuth.auth.getUser(token);
 
-    if (error) {
+    if (error || !data?.user) {
       return res.status(401).json({ error: "Invalid or expired token" });
     }
 
-    // 3️⃣ User request में attach करो
     req.user = data.user;
-
-    next(); // ✅ allow request
-
+    next();
   } catch (err) {
     return res.status(401).json({ error: "Unauthorized" });
   }
