@@ -692,8 +692,9 @@ app.get("/api/protected", authMiddleware, (req, res) => {
 /* =========================
    SERVER START
 ========================= */
-const PORT = process.env.PORT || 5000;
+// const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// app.listen(PORT, () => {
   console.log(`✅ Backend running on http://localhost:${PORT}`);
 });
+module.exports = app;
