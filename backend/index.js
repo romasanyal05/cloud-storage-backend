@@ -384,6 +384,9 @@ if (!req.user?.id) {
       console.log("SHARE INSERT ERROR MESSAGE >>>", shareError.message);
       return res.status(500).json({ error: shareError.message });
     }
+// ⭐ SABSE ZAROORI LINE: ⭐
+    // Ye line aapke Vercel settings se FRONTEND_URL uthayegi (localhost:5173)
+    const frontendLink = `${process.env.FRONTEND_URL}/share/${token}`;
     return res.json({
       message: "Share link created ✅",
       share: shareData,
