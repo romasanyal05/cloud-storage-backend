@@ -1,20 +1,23 @@
+require("dotenv").config();
+console.log("STRIPE KEY:", process.env.STRIPE_SECRET_KEY);
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
 const crypto = require("crypto");
 
 const BASE_URL =
   process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
- const shareUrl = `${baseUrl}/api/share/access/${shareId}`; 
+ const shareUrlBase = `${process.env.FRONTEND_URL}/share/`; 
 const upload = require("./middleware/upload");
-const supabaseAdmin = require("./supabase");
+const { supabaseAdmin, supabaseAuth } = require("./supabase");
+const supabase = supabaseAuth;
 const authMiddleware = require("./middleware/authMiddleware");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use("/api/payment", paymentRoutes);
 /* =========================
    BASIC TEST ROUTE
 ========================= */
@@ -339,9 +342,9 @@ app.delete("/api/files/:id/permanent", authMiddleware, async (req, res) => {
 ========================= */
 
 // CREATE share link
-app.post("/api/share/:fileId", authMiddleware, async (req, res) => {
+app.post("api/share/:fileId",authMiddleware, async(req,res) => {
   try {
-    const { fileId} = req.params;
+    const { fileIds,permission} = req.params;
   
 console.log("SHARE AUTH HEADER >>>", req.headers.authorization);
 console.log("SHARE REQ.USER >>>", req.user);
@@ -364,6 +367,7 @@ if (!req.user?.id) {
     }
 
     const token = crypto.randomBytes(20).toString("hex");
+    const shareUrl = `http://localhost:5173/share/${token}`;
 
     // ✅ Insert share link WITH user_id
     const { data: shareData, error: shareError } = await supabaseAdmin
@@ -371,7 +375,7 @@ if (!req.user?.id) {
       .insert([
         {
           file_id: fileId,
-          token,
+          token:token,
           permission: "view",
           user_id: req.user.id, // ✅ IMPORTANT
         },
@@ -386,12 +390,13 @@ if (!req.user?.id) {
     }
 // ⭐ SABSE ZAROORI LINE: ⭐
     // Ye line aapke Vercel settings se FRONTEND_URL uthayegi (localhost:5173)
-    const frontendLink = `${process.env.FRONTEND_URL}/share/${token}`;
-    return res.json({
-      message: "Share link created ✅",
-      share: shareData,
-      shareUrl: `${BASE_URL}/api/share/access/${token}`,
-    });
+    const finalLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/share/${token}`;
+
+return res.json({ 
+    message: "Share link created ✅", 
+    shareUrl: finalLink 
+});
+      
   } catch (err) {
     console.log("SHARE ROUTE ERROR >>>", err);
     console.log("SHARE ROUTE ERROR MESSAGE >>>", err?.message);
@@ -403,21 +408,29 @@ if (!req.user?.id) {
 app.get("/api/share/access/:token", async (req, res) => {
   try {
     const { token } = req.params;
-
+console.log("✅ TOKEN:", token);
     const { data: shareData, error: shareError } = await supabase
       .from("share_links")
       .select("*, files(*)")
       .eq("token", token)
       .single();
+      console.log("✅ shareError:", shareError);
+    console.log("✅ shareData:", shareData);
+    console.log("✅ shareData.files:", shareData?.files);
 
-    if (shareError) return res.status(404).json({ error: "Invalid share link" });
+    if (shareError || !shareData) {return res.status(404).json({ error: "Invalid share link" });
+  }
+const fileInfo = shareData.files;
 
     res.json({
       message: "Shared file accessed ✅",
-      file: shareData.files,
-      permission: shareData.permission,
+      file: fileInfo,
+        // Yahan hum manual download link bana rahe hain
+      url: `http://localhost:5000/api/files/download/${fileInfo.id}`,
+      permission: shareData.permission
     });
   } catch (err) {
+    console.error("Backend Error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -695,7 +708,11 @@ app.get("/api/protected", authMiddleware, (req, res) => {
 /* =========================
    SERVER START
 ========================= */
-   
+ 
+const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Backend is running on http://localhost:${PORT}`);
+  });
 
 
-module.exports = app;
+
