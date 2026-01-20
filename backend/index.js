@@ -13,35 +13,16 @@ const supabase = supabaseAuth;
 const authMiddleware = require("./middleware/authMiddleware");
 const paymentRoutes = require("./routes/paymentRoutes");
 const app = express();
-// ✅ CORS CODE HERE
-const allowedOrigins = [
-  "https://cloud-storage-frontend-sigma.vercel.app",
-  "https://cloud-storage-frontend-3d89mbtha-labmantix.vercel.app", //
-  "http://localhost:5173",
-];
-
-app.use(cors({
-    origin: function (origin, callback) {
-     // Agar request bina origin ke ho (jaise mobile apps) ya origin list mein ho
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS policy error: Origin not allowed"));
-    }
-  }, 
+// ✅ CORS CODE HEREf
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.options("*", cors());
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-
-
-app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
